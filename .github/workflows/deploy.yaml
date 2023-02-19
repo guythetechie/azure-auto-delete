@@ -23,7 +23,7 @@ jobs:
       - name: Test Azure function
         run: |
           set -Eeuo pipefail
-          dotnet test "${GITHUB.WORKSPACE}/code/azurefunctions.tests/azurefunctions.tests.csproj"
+          dotnet test "${GITHUB_WORKSPACE}/code/azurefunctions.tests/azurefunctions.tests.csproj"
 
   compile:
     name: Compile Azure function
