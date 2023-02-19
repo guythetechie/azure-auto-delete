@@ -6,19 +6,31 @@ jobs:
   deploy_infrastructure:
     name: Deploy Azure infrastructure
     runs-on: ubuntu-latest
+    steps:
+      - name: Deploy infrastructure
+        run: echo "Deploying infrastructure..."
 
   test:
-    name: Test Azure functions
+    name: Test Azure function
     runs-on: ubuntu-latest
+    steps:
+      - name: Test Azure function
+        run: echo "Testing Azure function..."
 
   compile:
-    name: Compile Azure functions
+    name: Compile Azure function
     runs-on: ubuntu-latest
+    steps:
+      - name: Compile Azure function
+        run: echo "Compiling Azure function..."
 
   publish:
-    name: Publish Azure functions
+    name: Publish Azure function
     needs:
       - deploy_infrastructure
       - test
       - compile
     runs-on: ubuntu-latest
+    steps:
+      - name: Publish Azure function
+        run: echo "Publishing Azure function..."
