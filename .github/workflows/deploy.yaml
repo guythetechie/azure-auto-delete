@@ -1,0 +1,24 @@
+name: Deploy to Azure
+
+on: push
+
+jobs:
+  deploy_infrastructure:
+    name: Deploy Azure infrastructure
+    runs-on: ubuntu-latest
+
+  test:
+    name: Test Azure functions
+    runs-on: ubuntu-latest
+
+  compile:
+    name: Compile Azure functions
+    runs-on: ubuntu-latest
+
+  publish:
+    name: Publish Azure functions
+    needs:
+      - deploy_infrastructure
+      - test
+      - compile
+    runs-on: ubuntu-latest
