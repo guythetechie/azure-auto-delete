@@ -52,7 +52,7 @@ internal static class Program
             return AzureResource.List(armClient, tagName, tagValue, token)
                     .Select(resource =>
                     {
-                        logger.LogInformation("Processing resource with ID {ResourceID}...", resource.Id);
+                        logger.LogInformation("Found resource with ID {ResourceID}...", resource.Id);
                         return resource;
                     });
         };
