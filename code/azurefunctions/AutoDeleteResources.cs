@@ -14,7 +14,7 @@ public class AutoDeleteResources
         this.listResources = listResources;
     }
 
-    [Function("AutoDeleteResources")]
+    [Function("delete-tagged-resources")]
     public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo trigger, CancellationToken cancellationToken)
     {
         var tagName = TagName.New("auto-delete");

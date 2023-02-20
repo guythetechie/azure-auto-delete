@@ -2,6 +2,9 @@ name: Deploy to Azure
 
 on: push
 
+env:
+  AZURE_FUNCTIONS_ARTIFACT_NAME: azure-functions
+
 jobs:
   deploy_infrastructure:
     name: Deploy Azure infrastructure
@@ -29,8 +32,26 @@ jobs:
     name: Compile Azure function
     runs-on: ubuntu-latest
     steps:
-      - name: Compile Azure function
-        run: echo "Compiling Azure function..."
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.x
+      - name: Set output directory
+        run: |
+          echo "FUNCTION_OUTPUT_DIRECTORY=${RUNNER_TEMP}/functionoutput" >> $GITHUB_ENV
+      - name: Build Azure function
+        run: |
+          set -Eeuo pipefail
+          dotnet build --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
+      - name: Save output
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
+          path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
+          if-no-files-found: error
+          retention-days: 1
 
   publish:
     name: Publish Azure function
