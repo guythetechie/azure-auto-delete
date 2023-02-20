@@ -44,7 +44,7 @@ jobs:
       - name: Build Azure function
         run: |
           set -Eeuo pipefail
-          dotnet build --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
+          dotnet build "${GITHUB_WORKSPACE}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
       - name: Save output
         uses: actions/upload-artifact@v3
         with:
