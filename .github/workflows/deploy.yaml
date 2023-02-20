@@ -134,7 +134,7 @@ jobs:
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
               ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
               ArchivePath = $zipPath
+              Force = true
             }
-            Write-Information $publishParameters
             Publish-AzWebApp @publishParameters
           azPSVersion: 'latest'
