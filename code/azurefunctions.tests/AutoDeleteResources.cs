@@ -5,11 +5,12 @@ using FluentAssertions;
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
+using LanguageExt;
 using Microsoft.Azure.Functions.Worker;
 using Moq;
-using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace azurefunctions.tests;
 
@@ -18,34 +19,60 @@ public class AutoDeleteResourcesTests
     [Property]
     public Property Resources_with_deletion_tags_are_deleted()
     {
-        var deletionCount = 0;
+        var arbitrary = Fixture.Generate().ToArbitrary();
 
-        var arbitrary = Gen.Constant(GenerateGenericResource(onDelete: () => Interlocked.Increment(ref deletionCount)))
-                           .ListOf()
-                           .ToArbitrary();
-
-        return Prop.ForAll(arbitrary, async resources =>
+        return Prop.ForAll(arbitrary, async fixture =>
         {
-            // Arrange
-            ListResourcesByTag listResources = (tagName, tagValue, token) => resources.ToAsyncEnumerable();
-            var cancellationToken = CancellationToken.None;
-
             // Act
-            await new AutoDeleteResources(listResources).Run(new TimerInfo(), cancellationToken);
+            await RunFunction(fixture);
 
             // Assert
-            deletionCount.Should().Be(resources.Count);
+            var resourceCount = fixture.Resources.Count;
+            var deletionCount = fixture.DeletionCount;
+            deletionCount.Should().Be(resourceCount);
         });
     }
 
-    private static GenericResource GenerateGenericResource(Action onDelete)
+    private sealed record Fixture
     {
-        var mock = new Mock<GenericResource>(MockBehavior.Strict);
+        private int deletionCount;
 
-        mock.Setup(resource => resource.DeleteAsync(It.IsAny<WaitUntil>(), It.IsAny<CancellationToken>()).Result)
-            .Callback(onDelete)
-            .Returns(It.IsAny<ArmOperation>());
+        public Seq<GenericResource> Resources { get; private set; } = Seq<GenericResource>.Empty;
 
-        return mock.Object;
+        public ListResourcesByTag ListResourcesByTag => (tagName, tagValue, token) => Resources.ToAsyncEnumerable();
+
+        public CancellationToken CancellationToken { get; } = CancellationToken.None;
+
+        public int DeletionCount => deletionCount;
+
+        public static Gen<Fixture> Generate()
+        {
+            var fixture = new Fixture();
+
+            return Gen.Constant(fixture.GenerateResource())
+                      .ListOf()
+                      .Select(resources =>
+                      {
+                          fixture.Resources = resources.ToSeq();
+                          return fixture;
+                      });
+        }
+
+        private GenericResource GenerateResource()
+        {
+            var mock = new Mock<GenericResource>(MockBehavior.Strict);
+
+            mock.Setup(resource => resource.DeleteAsync(It.IsAny<WaitUntil>(), It.IsAny<CancellationToken>()).Result)
+                .Callback(() => Interlocked.Increment(ref deletionCount))
+                .Returns(It.IsAny<ArmOperation>());
+
+            return mock.Object;
+        }
+    }
+
+    private static async ValueTask RunFunction(Fixture fixture)
+    {
+        await new AutoDeleteResources(fixture.ListResourcesByTag)
+                    .Run(new TimerInfo(), fixture.CancellationToken);
     }
 }

@@ -15,7 +15,9 @@ public class AutoDeleteResources
     }
 
     [Function("delete-tagged-resources")]
+#pragma warning disable IDE0060 // Remove unused parameter
     public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo trigger, CancellationToken cancellationToken)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var tagName = TagName.New("auto-delete");
         var tagValue = TagValue.New("yes");
