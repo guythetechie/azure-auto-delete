@@ -144,13 +144,12 @@ jobs:
             
             $uploadParameters = @{
               File = $zipPath
-              Blob = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME }}"
-              Container = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME }}"
+              Blob = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME }}"
+              Container = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME }}"
               Context = $storageAccountContext
             }
             Set-AzStorageBlobContent @uploadParameters
           azPSVersion: 'latest'
-          enable-AzPSSession: true
       - name: Restart function app
         uses: azure/powershell@v1
         with:
