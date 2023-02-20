@@ -147,6 +147,7 @@ jobs:
               Blob = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME }}"
               Container = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME }}"
               Context = $storageAccountContext
+              Force = true
             }
             Set-AzStorageBlobContent @uploadParameters
           azPSVersion: 'latest'
