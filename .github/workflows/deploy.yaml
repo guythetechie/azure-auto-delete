@@ -61,5 +61,11 @@ jobs:
       - compile
     runs-on: ubuntu-latest
     steps:
-      - name: Publish Azure function
-        run: echo "Publishing Azure function..."
+      - name: Set output directory
+        run: |
+          echo "FUNCTION_OUTPUT_DIRECTORY=${RUNNER_TEMP}/functionoutput" >> $GITHUB_ENV
+      - name: Download function artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
+          path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
