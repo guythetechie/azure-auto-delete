@@ -50,8 +50,5 @@ resource functionAppContributorRoleAssignment 'Microsoft.Authorization/roleAssig
   }
 }
 
-output logAnalyticsWorkspaceName string = logAnalyticsWorkspaceName
-output applicationInsightsName string = applicationInsightsName
-output storageAccountName string = storageAccountName
-output appServicePlanName string = appServicePlanName
+output resourceGroupName string = resourceGroup.name
 output functionAppName string = functionAppName

@@ -12,6 +12,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      RESOURCE_GROUP_NAME: ${{ steps.deploy-infrastructure.outputs.RESOURCE_GROUP_NAME }}
+      FUNCTION_APP_NAME: ${{ steps.deploy-infrastructure.outputs.FUNCTION_APP_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -23,6 +26,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           enable-AzPSSession: true
       - name: Deploy infrastructure
+        id: deploy-infrastructure
         uses: azure/powershell@v1
         with:
           inlineScript: |
@@ -40,9 +44,10 @@ jobs:
               }
             }
             $deployment = New-AzDeployment @parameters
-            Write-Information $deployment
-          azPSVersion: 'latest'
 
+            "RESOURCE_GROUP_NAME=$($deployment.Outputs.resourceGroupName.Value)" >> ${{ github.output }}
+            "FUNCTION_APP_NAME=$($deployment.Outputs.functionAppName.Value)" >> ${{ github.output }}
+          azPSVersion: 'latest'
 
   test:
     name: Test Azure function
