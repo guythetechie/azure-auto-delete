@@ -76,7 +76,7 @@ jobs:
           dotnet-version: 7.x
       - name: Set output directory
         run: |
-          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> $GITHUB_ENV
+          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
       - name: Build Azure function
         run: |
           set -Eeuo pipefail
@@ -96,12 +96,42 @@ jobs:
       - test
       - compile
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Set output directory
         run: |
-          echo "FUNCTION_OUTPUT_DIRECTORY=${RUNNER_TEMP}/functionoutput" >> $GITHUB_ENV
+          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
       - name: Download function artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
           path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+      - name: Get function publish profile
+        id: get-publish-profile
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            Set-StrictMode -Version Latest
+            $ErrorActionPreference = "Stop"
+            $VerbosePreference = "Continue"
+            $InformationPreference = "Continue"
+
+            $profile = Get-AzWebAppPublishingProfile -Name "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}" -ResourceGroupName "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
+            $profile = $profile.Replace("`r", "").Replace("`n", "")
+            
+            "PUBLISH_PROFILE=$profile" >> ${{ github.env }}
+          azPSVersion: 'latest'
+      - name: Deploy function app
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}
+          package: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
+          publish-profile: ${{ env.PUBLISH_PROFILE }}
