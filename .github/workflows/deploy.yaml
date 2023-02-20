@@ -32,9 +32,10 @@ jobs:
 
             $parameters = @{
               Name = "autodelete-deployment"
+              Location = "eastus"
               TemplateFile = "${{ github.workspace }}/bicep/main.bicep"
               TemplateParameterObject = @{
-                location = 'eastus'
+                location = "eastus"
               }
             }
             $deployment = New-AzDeployment @parameters
