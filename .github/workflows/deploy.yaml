@@ -130,7 +130,7 @@ jobs:
             }
             Compress-Archive @compressParameters
 
-            $publishParameters = {
+            $publishParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
               ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
               ArchivePath = $zipPath
