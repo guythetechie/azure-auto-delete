@@ -3,8 +3,12 @@ param location string = resourceGroup().location
 param logAnalyticsWorkspaceName string
 param applicationInsightsName string
 param storageAccountName string
+param storageAccountFunctionAppContainerName string
+param storageAccountFunctionAppPackageName string
 param appServicePlanName string
 param functionAppName string
+
+var functionAppPackageUrl = '${storageAccount.properties.primaryEndpoints.blob}/${storageAccountFunctionAppContainer.name}/${storageAccountFunctionAppPackageName}'
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsWorkspaceName
@@ -39,6 +43,16 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
   }
+}
+
+resource storageAccountBlobServices 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+  name: 'default'
+  parent: storageAccount
+}
+
+resource storageAccountFunctionAppContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: storageAccountFunctionAppContainerName
+  parent: storageAccountBlobServices
 }
 
 resource storageAccountDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -111,9 +125,10 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
     AzureWebJobsStorage__queueServiceUri: storageAccount.properties.primaryEndpoints.queue
     FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated'
     FUNCTIONS_EXTENSION_VERSION: '~4'
+    linuxFxVersion: 'DOTNET-ISOLATED|7.0'
     Logging__LogLevel__Default: 'Information'
     Logging__ApplicationInsights__LogLevel__Default: 'Information'
-    WEBSITE_RUN_FROM_PACKAGE: '1'
+    WEBSITE_RUN_FROM_PACKAGE: functionAppPackageUrl
   }
 }
 
@@ -146,3 +161,5 @@ resource functionAppStorageBlobDataOwnerRoleAssignment 'Microsoft.Authorization/
     principalType: 'ServicePrincipal'
   }
 }
+
+output functionAppPackageUrl string = functionAppPackageUrl
