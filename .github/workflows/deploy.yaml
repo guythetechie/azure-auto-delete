@@ -125,7 +125,7 @@ jobs:
 
             $zipPath = Join-Path "${{ runner.temp }}" "functionoutput.zip"
             $compressParameters = @{
-              Path = Join-Path ${{ env.FUNCTION_OUTPUT_DIRECTORY }} "/"
+              Path = Join-Path ${{ env.FUNCTION_OUTPUT_DIRECTORY }} "*"
               DestinationPath = $zipPath
             }
             Compress-Archive @compressParameters
