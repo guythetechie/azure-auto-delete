@@ -13,8 +13,8 @@ jobs:
       id-token: write
       contents: read
     outputs:
-      RESOURCE_GROUP_NAME: ${{ steps.deploy-infrastructure.outputs.RESOURCE_GROUP_NAME }}
-      FUNCTION_APP_NAME: ${{ steps.deploy-infrastructure.outputs.FUNCTION_APP_NAME }}
+      RESOURCE_GROUP_NAME: ${{ steps.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}
+      FUNCTION_APP_NAME: ${{ steps.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -26,7 +26,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           enable-AzPSSession: true
       - name: Deploy infrastructure
-        id: deploy-infrastructure
+        id: deploy_infrastructure
         uses: azure/powershell@v1
         with:
           inlineScript: |
@@ -114,8 +114,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           enable-AzPSSession: true
-      - name: Get function publish profile
-        id: get-publish-profile
+      - name: Deploy function app
         uses: azure/powershell@v1
         with:
           inlineScript: |
@@ -124,14 +123,17 @@ jobs:
             $VerbosePreference = "Continue"
             $InformationPreference = "Continue"
 
-            $profile = Get-AzWebAppPublishingProfile -Name "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}" -ResourceGroupName "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
-            $profile = $profile.Replace("`r", "").Replace("`n", "")
-            
-            "PUBLISH_PROFILE=$profile" >> ${{ github.env }}
+            $zipPath = Join-Path "${{ runner.temp }}" "functionoutput.zip"
+            $compressParameters = @{
+              Path = Join-Path ${{ env.FUNCTION_OUTPUT_DIRECTORY }} "/"
+              DestinationPath = $zipPath
+            }
+            Compress-Archive @compressParameters
+
+            $publishParameters = {
+              Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
+              ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
+              ArchivePath = $zipPath
+            }
+            Publish-AzWebApp @publishParameters
           azPSVersion: 'latest'
-      - name: Deploy function app
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}
-          package: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
-          publish-profile: ${{ env.PUBLISH_PROFILE }}
