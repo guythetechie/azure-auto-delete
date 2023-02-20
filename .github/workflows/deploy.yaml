@@ -148,7 +148,7 @@ jobs:
               Container = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME }}"
               Context = $storageAccountContext
             }
-            Set-AzStorageBlobContent @blobParameters
+            Set-AzStorageBlobContent @uploadParameters
           azPSVersion: 'latest'
           enable-AzPSSession: true
       - name: Restart function app
@@ -159,13 +159,6 @@ jobs:
             $ErrorActionPreference = "Stop"
             $VerbosePreference = "Continue"
             $InformationPreference = "Continue"
-
-            $zipPath = Join-Path "${{ runner.temp }}" "functionoutput.zip"
-            $compressParameters = @{
-              Path = Join-Path ${{ env.FUNCTION_OUTPUT_DIRECTORY }} "*"
-              DestinationPath = $zipPath
-            }
-            Compress-Archive @compressParameters
 
             $restartParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
