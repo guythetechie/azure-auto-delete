@@ -71,6 +71,21 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   }
 }
 
+resource appServicePlanNameDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'enable-all'
+  scope: appServicePlan
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logAnalyticsDestinationType: 'Dedicated'
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+
 resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
   name: functionAppName
   location: location
@@ -99,5 +114,35 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
     Logging__LogLevel__Default: 'Information'
     Logging__ApplicationInsights__LogLevel__Default: 'Information'
     WEBSITE_RUN_FROM_PACKAGE: '1'
+  }
+}
+
+resource functionAppDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'enable-all'
+  scope: functionApp
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logAnalyticsDestinationType: 'Dedicated'
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+
+resource storageBlobDataOwnerRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
+  scope: subscription()
+  name: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
+}
+
+resource functionAppStorageBlobDataOwnerRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: guid(storageAccount.id, functionApp.id, storageBlobDataOwnerRoleDefinition.id)
+  scope: storageAccount
+  properties: {
+    principalId: functionApp.identity.principalId
+    roleDefinitionId: storageBlobDataOwnerRoleDefinition.id
+    principalType: 'ServicePrincipal'
   }
 }

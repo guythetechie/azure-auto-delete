@@ -32,7 +32,7 @@ jobs:
 
             $parameters = @{
               Name = "autodelete-deployment"
-              TemplateFile = "${GITHUB_WORKSPACE}/bicep/main.bicep"
+              TemplateFile = "${{ github.workspace }}/bicep/main.bicep"
               TemplateParameterObject = @{
                 location = 'eastus'
               }
@@ -55,7 +55,7 @@ jobs:
       - name: Test Azure function
         run: |
           set -Eeuo pipefail
-          dotnet test "${GITHUB_WORKSPACE}/code/azurefunctions.tests/azurefunctions.tests.csproj"
+          dotnet test "${{ github.workspace }}/code/azurefunctions.tests/azurefunctions.tests.csproj"
 
   compile:
     name: Compile Azure function
@@ -69,11 +69,11 @@ jobs:
           dotnet-version: 7.x
       - name: Set output directory
         run: |
-          echo "FUNCTION_OUTPUT_DIRECTORY=${RUNNER_TEMP}/functionoutput" >> $GITHUB_ENV
+          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> $GITHUB_ENV
       - name: Build Azure function
         run: |
           set -Eeuo pipefail
-          dotnet build "${GITHUB_WORKSPACE}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
+          dotnet build "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
       - name: Save output
         uses: actions/upload-artifact@v3
         with:

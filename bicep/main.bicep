@@ -16,7 +16,7 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   tags: tags
 }
 
-module functionApp 'functionapp.bicep' = {
+module functionAppModule 'functionapp.bicep' = {
   scope: resourceGroup
   name: 'functionAppModule'
   params: {
@@ -27,6 +27,26 @@ module functionApp 'functionapp.bicep' = {
     storageAccountName: storageAccountName
     appServicePlanName: appServicePlanName
     functionAppName: functionAppName
+  }
+}
+
+resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
+  scope: subscription()
+  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+}
+
+resource functionApp 'Microsoft.Web/sites@2022-03-01' existing = {
+  name: functionAppName
+  scope: resourceGroup
+}
+
+resource functionAppContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: guid(subscription().id, functionApp.id, contributorRoleDefinition.id)
+  scope: subscription()
+  properties: {
+    principalId: functionApp.identity.principalId
+    roleDefinitionId: contributorRoleDefinition.id
+    principalType: 'ServicePrincipal'
   }
 }
 
