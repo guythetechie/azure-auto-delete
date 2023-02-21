@@ -15,9 +15,6 @@ jobs:
     outputs:
       RESOURCE_GROUP_NAME: ${{ steps.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}
       FUNCTION_APP_NAME: ${{ steps.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}
-      STORAGE_ACCOUNT_NAME: ${{ steps.deploy_infrastructure.outputs.STORAGE_ACCOUNT_NAME }}
-      STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME: ${{ steps.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME }}
-      STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME: ${{ steps.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -50,9 +47,6 @@ jobs:
 
             "RESOURCE_GROUP_NAME=$($deployment.Outputs.resourceGroupName.Value)" >> ${{ github.output }}
             "FUNCTION_APP_NAME=$($deployment.Outputs.functionAppName.Value)" >> ${{ github.output }}
-            "STORAGE_ACCOUNT_NAME=$($deployment.Outputs.storageAccountName.Value)" >> ${{ github.output }}
-            "STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME=$($deployment.Outputs.storageAccountFunctionAppContainerName.Value)" >> ${{ github.output }}
-            "STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME=$($deployment.Outputs.storageAccountFunctionAppPackageName.Value)" >> ${{ github.output }}
           azPSVersion: 'latest'
 
   test:
@@ -120,7 +114,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           enable-AzPSSession: true
-      - name: Upload package to storage account
+      - name: Publish function app
         uses: azure/powershell@v1
         with:
           inlineScript: |
@@ -135,34 +129,11 @@ jobs:
               DestinationPath = $zipPath
             }
             Compress-Archive @compressParameters
-            
-            $storageAccountParameters = @{
-              Name = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_NAME }}"
-              ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
-            }
-            $storageAccountContext = Get-AzStorageAccount @storageAccountParameters | Select-Object -ExpandProperty "Context"
-            
-            $uploadParameters = @{
-              File = $zipPath
-              Blob = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_PACKAGE_NAME }}"
-              Container = "${{ needs.deploy_infrastructure.outputs.STORAGE_ACCOUNT_FUNCTION_APP_CONTAINER_NAME }}"
-              Context = $storageAccountContext
-              Force = true
-            }
-            Set-AzStorageBlobContent @uploadParameters
-          azPSVersion: 'latest'
-      - name: Restart function app
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-            Set-StrictMode -Version Latest
-            $ErrorActionPreference = "Stop"
-            $VerbosePreference = "Continue"
-            $InformationPreference = "Continue"
 
-            $restartParameters = @{
+            $publishParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
               ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
+              ArchivePath = $zipPath
             }
-            Restart-AzWebApp @restartParameters
+            Publish-AzWebApp @publishParameters
           azPSVersion: 'latest'

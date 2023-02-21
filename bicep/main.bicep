@@ -7,8 +7,6 @@ param resourceGroupName string = 'autodelete-rg'
 var logAnalyticsWorkspaceName = 'autodelete-${uniqueString(resourceGroup.id)}-law'
 var applicationInsightsName = 'autodelete-${uniqueString(resourceGroup.id)}-appinsights'
 var storageAccountName = 'autodelete${uniqueString(resourceGroup.id)}'
-var storageAccountFunctionAppContainerName = 'function-packages'
-var storageAccountFunctionAppPackageName = 'functions.zip'
 var appServicePlanName = 'autodelete-${uniqueString(resourceGroup.id)}-appserviceplan'
 var functionAppName = 'autodelete-${uniqueString(resourceGroup.id)}-functionapp'
 
@@ -27,8 +25,6 @@ module functionAppModule 'functionapp.bicep' = {
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     applicationInsightsName: applicationInsightsName
     storageAccountName: storageAccountName
-    storageAccountFunctionAppContainerName: storageAccountFunctionAppContainerName
-    storageAccountFunctionAppPackageName: storageAccountFunctionAppPackageName
     appServicePlanName: appServicePlanName
     functionAppName: functionAppName
 
@@ -56,7 +52,4 @@ resource functionAppContributorRoleAssignment 'Microsoft.Authorization/roleAssig
 }
 
 output resourceGroupName string = resourceGroup.name
-output storageAccountName string = storageAccountName
-output storageAccountFunctionAppContainerName string = storageAccountFunctionAppContainerName
-output storageAccountFunctionAppPackageName string = storageAccountFunctionAppPackageName
 output functionAppName string = functionAppName

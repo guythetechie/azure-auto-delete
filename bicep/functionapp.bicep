@@ -3,12 +3,8 @@ param location string = resourceGroup().location
 param logAnalyticsWorkspaceName string
 param applicationInsightsName string
 param storageAccountName string
-param storageAccountFunctionAppContainerName string
-param storageAccountFunctionAppPackageName string
 param appServicePlanName string
 param functionAppName string
-
-var functionAppPackageUrl = '${storageAccount.properties.primaryEndpoints.blob}/${storageAccountFunctionAppContainer.name}/${storageAccountFunctionAppPackageName}'
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsWorkspaceName
@@ -45,16 +41,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
-resource storageAccountBlobServices 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  name: 'default'
-  parent: storageAccount
-}
-
-resource storageAccountFunctionAppContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: storageAccountFunctionAppContainerName
-  parent: storageAccountBlobServices
-}
-
 resource storageAccountDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'enable-all'
   scope: storageAccount
@@ -80,9 +66,6 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
     size: 'Y1'
     family: 'Y'
   }
-  properties: {
-    reserved: true
-  }
 }
 
 resource appServicePlanNameDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -103,7 +86,7 @@ resource appServicePlanNameDiagnosticSettings 'Microsoft.Insights/diagnosticSett
 resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
   name: functionAppName
   location: location
-  kind: 'functionapp,linux'
+  kind: 'functionapp'
   identity: {
     type: 'SystemAssigned'
   }
@@ -127,17 +110,6 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2022-03-01' = {
     FUNCTIONS_EXTENSION_VERSION: '~4'
     Logging__LogLevel__Default: 'Information'
     Logging__ApplicationInsights__LogLevel__Default: 'Information'
-    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value}'
-    WEBSITE_CONTENTSHARE: 'azure-function'
-    WEBSITE_RUN_FROM_PACKAGE: functionAppPackageUrl
-  }
-}
-
-resource functionWebConfig 'Microsoft.Web/sites/config@2022-03-01' = {
-  name: 'web'
-  parent: functionApp
-  properties: {
-    linuxFxVersion: 'DOTNET-ISOLATED|7.0'
   }
 }
 
@@ -170,5 +142,3 @@ resource functionAppStorageBlobDataOwnerRoleAssignment 'Microsoft.Authorization/
     principalType: 'ServicePrincipal'
   }
 }
-
-output functionAppPackageUrl string = functionAppPackageUrl
