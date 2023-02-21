@@ -80,7 +80,7 @@ jobs:
       - name: Build Azure function
         run: |
           set -Eeuo pipefail
-          dotnet build "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
+          dotnet build "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}" --runtime win-x64 --no-self-contained
       - name: Save output
         uses: actions/upload-artifact@v3
         with:
