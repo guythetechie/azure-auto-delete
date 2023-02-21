@@ -1,6 +1,5 @@
-using Azure;
+using Azure.Core;
 using Azure.ResourceManager;
-using Azure.ResourceManager.Resources;
 using FluentAssertions;
 using FsCheck;
 using FsCheck.Fluent;
@@ -8,6 +7,7 @@ using FsCheck.Xunit;
 using LanguageExt;
 using Microsoft.Azure.Functions.Worker;
 using Moq;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,52 +27,50 @@ public class AutoDeleteResourcesTests
             await RunFunction(fixture);
 
             // Assert
-            var resourceCount = fixture.Resources.Count;
-            var deletionCount = fixture.DeletionCount;
-            deletionCount.Should().Be(resourceCount);
+            var expectedResources = fixture.Resources.Map(resource => resource.Id.ToString());
+            var actualResources = fixture.DeletedResources.Map(resource => resource.ToString());
+            actualResources.Should().BeEquivalentTo(expectedResources);
         });
     }
 
     private sealed record Fixture
     {
-        private int deletionCount;
+        public Seq<ArmResource> Resources { get; init; }
 
-        public Seq<GenericResource> Resources { get; private set; } = Seq<GenericResource>.Empty;
-
-        public ListResourcesByTag ListResourcesByTag => (tagName, tagValue, token) => Resources.ToAsyncEnumerable();
-
-        public CancellationToken CancellationToken { get; } = CancellationToken.None;
-
-        public int DeletionCount => deletionCount;
+        public AtomSeq<ResourceIdentifier> DeletedResources { get; init; } = AtomSeq<ResourceIdentifier>.Empty;
 
         public static Gen<Fixture> Generate()
         {
-            var fixture = new Fixture();
-
-            return Gen.Constant(fixture.GenerateResource())
+            return Gen.Constant(GenerateResource())
                       .ListOf()
-                      .Select(resources =>
+                      .Select(list => new Fixture
                       {
-                          fixture.Resources = resources.ToSeq();
-                          return fixture;
+                          Resources = list.ToSeq()
                       });
         }
 
-        private GenericResource GenerateResource()
+        private static ArmResource GenerateResource()
         {
-            var mock = new Mock<GenericResource>(MockBehavior.Strict);
+            var mock = new Mock<ArmResource>(MockBehavior.Strict);
 
-            mock.Setup(resource => resource.DeleteAsync(It.IsAny<WaitUntil>(), It.IsAny<CancellationToken>()).Result)
-                .Callback(() => Interlocked.Increment(ref deletionCount))
-                .Returns(It.IsAny<ArmOperation>());
+            mock.Setup(resource => resource.Id)
+                .Returns(new ResourceIdentifier(Guid.NewGuid().ToString()));
 
             return mock.Object;
         }
     }
 
-    private static async ValueTask RunFunction(Fixture fixture)
+    private static async ValueTask<Unit> RunFunction(Fixture fixture)
     {
-        await new AutoDeleteResources(fixture.ListResourcesByTag)
-                    .Run(new TimerInfo(), fixture.CancellationToken);
+        ListArmResourcesByTag listResources = (tagName, tagValue, token) => fixture.Resources.ToAsyncEnumerable();
+
+        DeleteArmResource deleteResource = async (resource, token) =>
+        {
+            await ValueTask.CompletedTask;
+            return fixture.DeletedResources.Add(resource.Id);
+        };
+
+        return await new AutoDeleteResources(listResources, deleteResource)
+                            .Run(new TimerInfo(), CancellationToken.None);
     }
 }

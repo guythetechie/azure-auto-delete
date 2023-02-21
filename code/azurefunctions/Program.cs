@@ -69,7 +69,7 @@ public static class Program
         return new ArmClient(credential);
     }
 
-    private static ListResourcesByTag ListResourcesByTag(IServiceProvider provider)
+    private static ListArmResourcesByTag ListResourcesByTag(IServiceProvider provider)
     {
         var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger(nameof(ListResourcesByTag));
@@ -79,12 +79,18 @@ public static class Program
         {
             logger.LogInformation("Finding resources with tag name {TagName} and value {TagValue}...", tagName.Value, tagValue.Value);
 
-            return AzureResource.List(armClient, tagName, tagValue, token)
-                    .Select(resource =>
-                    {
-                        logger.LogInformation("Found resource with ID {ResourceID}...", resource.Id);
-                        return resource;
-                    });
+            var resources = Azure.ListResources(armClient, tagName, tagValue, token)
+                                 .Select(resource => resource as ArmResource);
+
+            var resourceGroups = Azure.ListResourceGroups(armClient, tagName, tagValue, token)
+                                      .Select(resourceGroup => resourceGroup as ArmResource);
+
+            return resources.Concat(resourceGroups)
+                            .Select(resource =>
+                            {
+                                logger.LogInformation("Found resource with ID {ResourceID}...", resource.Id);
+                                return resource;
+                            });
         };
     }
 }
