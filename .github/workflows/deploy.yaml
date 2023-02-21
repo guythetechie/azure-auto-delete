@@ -113,7 +113,6 @@ jobs:
         with:
           path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
           key: "${{ needs.compile.outputs.AZURE_FUNCTIONS_CACHE_KEY }}"
-          fail-on-cache-miss: true
       - name: Login to Azure
         uses: azure/login@v1
         with:
