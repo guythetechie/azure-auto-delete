@@ -146,6 +146,11 @@ jobs:
             }
             Compress-Archive @compressParameters
 
+            $expandPath = Join-Path "${{ runner.temp }}" "funcexpand"
+            New-Item $expandPath -ItemType Directory
+            Expand-Archive -LiteralPath $zipPath -DestinationPath $expandPath
+            Get-ChildItem $expandPath -Recurse
+
             $publishParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
               ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
