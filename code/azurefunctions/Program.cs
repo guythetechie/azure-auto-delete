@@ -1,6 +1,9 @@
+using Azure;
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Azure.ResourceManager.Resources;
+using LanguageExt;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -91,6 +94,26 @@ public static class Program
                                 logger.LogInformation("Found resource with ID {ResourceID}...", resource.Id);
                                 return resource;
                             });
+        };
+    }
+
+    private static DeleteArmResource DeleteArmResource(IServiceProvider provider)
+    {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger(nameof(ListResourcesByTag));
+        var armClient = provider.GetRequiredService<ArmClient>();
+
+        return async (resource, token) =>
+        {
+            logger.LogInformation("Deleting resource with ID {ResourceID}...", resource.Id);
+            await (resource switch
+            {
+                GenericResource genericResource => genericResource.DeleteAsync(WaitUntil.Started, token),
+                ResourceGroupResource resourceGroupResource => resourceGroupResource.DeleteAsync(WaitUntil.Started, cancellationToken: token),
+                _ => throw new NotImplementedException()
+            });
+
+            return Prelude.unit;
         };
     }
 }
