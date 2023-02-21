@@ -1,31 +1,61 @@
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.ComponentModel.Design;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace azurefunctions;
 
 internal static class Program
 {
-    private static void Main(string[] arguments)
+    private static async Task Main(string[] arguments)
     {
-        new HostBuilder()
-            .ConfigureFunctionsWorkerDefaults()
-            .ConfigureServices(ConfigureServices)
-            .Build()
-            .Run();
+        await new HostBuilder().ConfigureFunctionsWorkerDefaults(ConfigureFunctionsWorker)
+                               .ConfigureLogging(AddDebugLogging)
+                               .ConfigureServices(ConfigureServices)
+                               .Build()
+                               .RunAsync();
+    }
+
+    private static void ConfigureFunctionsWorker(IFunctionsWorkerApplicationBuilder builder)
+    {
+        builder.AddApplicationInsights()
+               .AddApplicationInsightsLogger();
+    }
+
+    private static void AddDebugLogging(ILoggingBuilder builder)
+    {
+        builder.AddConsole();
+        builder.AddDebug();
     }
 
     private static void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton(GetTokenCredential)
+        services.RemoveLoggingFilter()
+                .AddSingleton(GetTokenCredential)
                 .AddSingleton(GetArmClient)
                 .AddSingleton(ListResourcesByTag);
+    }
+
+    private static IServiceCollection RemoveLoggingFilter(this IServiceCollection services)
+    {
+        services.Configure<LoggerFilterOptions>(options =>
+        {
+            var rulesToRemove = options.Rules.Where(rule => rule.ProviderName == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider")
+                                             .ToList();
+
+            foreach (var rule in rulesToRemove)
+            {
+                options.Rules.Remove(rule);
+            }
+        });
+
+        return services;
     }
 
     private static TokenCredential GetTokenCredential(IServiceProvider provider)
