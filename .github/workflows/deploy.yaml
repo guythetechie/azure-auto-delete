@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  AZURE_FUNCTIONS_ARTIFACT_NAME: azure-functions
+  AZURE_FUNCTIONS_ARTIFACT_CACHE_KEY: azure-functions
 
 jobs:
   deploy_infrastructure:
@@ -68,7 +68,7 @@ jobs:
 
   compile:
     name: Compile Azure function
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -77,33 +77,17 @@ jobs:
         with:
           dotnet-version: 7.x
       - name: Set output directory
-        shell: pwsh
         run: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = "Stop"
-          $VerbosePreference = "Continue"
-          $InformationPreference = "Continue"
-
-          $outputDirectory = Join-Path ${{ runner.temp }} "functionoutput"
-          "FUNCTION_OUTPUT_DIRECTORY=$outputDirectory" >> ${{ github.env }}
+          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
       - name: Build Azure function
-        shell: pwsh
         run: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = "Stop"
-          $VerbosePreference = "Continue"
-          $InformationPreference = "Continue"
-          
-          $path = Join-Path ${{ github.workspace }} "code" "azurefunctions" "azurefunctions.csproj"
-          & dotnet publish "$path" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
-          if ($LASTEXITCODE -ne 0) { throw "Building function failed."}
+          set -Eeuo pipefail
+          dotnet publish "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
       - name: Save output
-        uses: actions/upload-artifact@v3
+        uses: actions/cache/save@v3
         with:
-          name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
           path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
-          if-no-files-found: error
-          retention-days: 1
+          key: ${{ env.AZURE_FUNCTIONS_ARTIFACT_CACHE_KEY }}
 
   publish:
     name: Publish Azure function
@@ -111,25 +95,19 @@ jobs:
       - deploy_infrastructure
       - test
       - compile
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
       - name: Set output directory
-        shell: pwsh
         run: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = "Stop"
-          $VerbosePreference = "Continue"
-          $InformationPreference = "Continue"
-
-          $outputDirectory = Join-Path ${{ runner.temp }} "functionoutput"
-          "FUNCTION_OUTPUT_DIRECTORY=$outputDirectory" >> ${{ github.env }}
-      - name: Download function artifact
-        uses: actions/download-artifact@v3
+          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
+      - name: Save output
+        uses: actions/cache/restore@v3
         with:
-          name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
           path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
+          key: ${{ env.AZURE_FUNCTIONS_ARTIFACT_CACHE_KEY }}
+          fail-on-cache-miss: true
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -152,11 +130,6 @@ jobs:
               DestinationPath = $zipPath
             }
             Compress-Archive @compressParameters
-
-            $expandPath = Join-Path "${{ runner.temp }}" "funcexpand"
-            New-Item $expandPath -ItemType Directory
-            Expand-Archive -LiteralPath $zipPath -DestinationPath $expandPath
-            Get-ChildItem $expandPath -Recurse
 
             $publishParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
