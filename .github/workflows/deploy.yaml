@@ -66,7 +66,7 @@ jobs:
 
   compile:
     name: Compile Azure function
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -75,12 +75,26 @@ jobs:
         with:
           dotnet-version: 7.x
       - name: Set output directory
+        shell: pwsh
         run: |
-          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $VerbosePreference = "Continue"
+          $InformationPreference = "Continue"
+
+          $outputDirectory = Join-Path ${{ runner.temp }} "functionoutput"
+          "FUNCTION_OUTPUT_DIRECTORY=$outputDirectory" >> ${{ github.env }}
       - name: Build Azure function
+        shell: pwsh
         run: |
-          set -Eeuo pipefail
-          dotnet build "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}" --runtime win-x64 --no-self-contained
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $VerbosePreference = "Continue"
+          $InformationPreference = "Continue"
+          
+          $path = Join-Path ${{ github.workspace }} "code" "azurefunctions" "azurefunctions.csproj"
+          & dotnet publish "$path" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
+          if ($LASTEXITCODE -ne 0) { throw "Building function failed."}
       - name: Save output
         uses: actions/upload-artifact@v3
         with:
