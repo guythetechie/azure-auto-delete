@@ -103,9 +103,8 @@ jobs:
     runs-on: windows-latest
     permissions:
       id-token: write
-      actions: read
+      packages: read
       contents: read
-      deployments: read
     steps:
       - name: Set output directory
         run: |
