@@ -114,9 +114,9 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
   }
 }
 
-resource functionAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
-  parent: functionApp
+resource functionAppSettings 'Microsoft.Web/sites/config@2022-03-01' = {
   name: 'appsettings'
+  parent: functionApp
   properties: {
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsights.properties.ConnectionString
     AZURE_CLOUD_ENVIRONMENT: environment().name
@@ -125,12 +125,18 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
     AzureWebJobsStorage__queueServiceUri: storageAccount.properties.primaryEndpoints.queue
     FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated'
     FUNCTIONS_EXTENSION_VERSION: '~4'
-    linuxFxVersion: 'DOTNET-ISOLATED|7.0'
     Logging__LogLevel__Default: 'Information'
     Logging__ApplicationInsights__LogLevel__Default: 'Information'
-    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value}'
     WEBSITE_CONTENTSHARE: 'azure-function'
     WEBSITE_RUN_FROM_PACKAGE: functionAppPackageUrl
+  }
+}
+
+resource functionWebConfig 'Microsoft.Web/sites/config@2022-03-01' = {
+  name: 'web'
+  parent: functionApp
+  properties: {
+    linuxFxVersion: 'DOTNET-ISOLATED|7.0'
   }
 }
 
