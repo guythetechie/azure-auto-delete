@@ -101,7 +101,8 @@ jobs:
     steps:
       - name: Set output directory
         run: |
-          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
+          $outputDirectory = Join-Path ${{ runner.temp }} "functionoutput"
+          echo "FUNCTION_OUTPUT_DIRECTORY=$outputDirectory" >> ${{ github.env }}
       - name: Download output
         uses: actions/cache/restore@v3
         with:
