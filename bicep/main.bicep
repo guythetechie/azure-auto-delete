@@ -27,7 +27,6 @@ module functionAppModule 'functionapp.bicep' = {
     storageAccountName: storageAccountName
     appServicePlanName: appServicePlanName
     functionAppName: functionAppName
-
   }
 }
 
@@ -44,6 +43,9 @@ resource functionApp 'Microsoft.Web/sites@2022-03-01' existing = {
 resource functionAppContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
   name: guid(subscription().id, functionApp.id, contributorRoleDefinition.id)
   scope: subscription()
+  dependsOn: [
+    functionAppModule
+  ]
   properties: {
     principalId: functionApp.identity.principalId
     roleDefinitionId: contributorRoleDefinition.id
