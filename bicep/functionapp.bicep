@@ -127,6 +127,8 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2022-03-01' = {
     FUNCTIONS_EXTENSION_VERSION: '~4'
     Logging__LogLevel__Default: 'Information'
     Logging__ApplicationInsights__LogLevel__Default: 'Information'
+    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value}'
+    WEBSITE_CONTENTSHARE: 'azure-function'
     WEBSITE_RUN_FROM_PACKAGE: functionAppPackageUrl
   }
 }

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace azurefunctions;
 
-internal static class Program
+public static class Program
 {
     private static async Task Main(string[] arguments)
     {
