@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   push:
 
-env:
-  AZURE_FUNCTIONS_ARTIFACT_CACHE_KEY: azure-functions
-
 jobs:
   deploy_infrastructure:
     name: Deploy Azure infrastructure
@@ -69,6 +66,8 @@ jobs:
   compile:
     name: Compile Azure function
     runs-on: ubuntu-latest
+    outputs:
+      AZURE_FUNCTIONS_CACHE_KEY: ${{ steps.generate_cache_key.outputs.AZURE_FUNCTIONS_CACHE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -83,11 +82,17 @@ jobs:
         run: |
           set -Eeuo pipefail
           dotnet publish "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
+      - name: Generate cache key
+        id: generate_cache_key
+        shell: pwsh
+        run: |
+          $key = "azure-functions-output-$(New-Guid)"
+          "AZURE_FUNCTIONS_CACHE_KEY=$key" >> ${{ github.output }}
       - name: Save output
         uses: actions/cache/save@v3
         with:
           path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
-          key: ${{ env.AZURE_FUNCTIONS_ARTIFACT_CACHE_KEY }}
+          key: ${{ steps.generate_cache_key.outputs.AZURE_FUNCTIONS_CACHE_KEY }}
 
   publish:
     name: Publish Azure function
@@ -107,7 +112,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
-          key: ${{ env.AZURE_FUNCTIONS_ARTIFACT_CACHE_KEY }}
+          key: "${{ needs.compile.outputs.AZURE_FUNCTIONS_CACHE_KEY }}"
           fail-on-cache-miss: true
       - name: Login to Azure
         uses: azure/login@v1
