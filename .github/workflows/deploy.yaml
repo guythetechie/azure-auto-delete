@@ -88,11 +88,14 @@ jobs:
           $outputDirectoryPath = Join-Path "${{ runner.temp }}" "functionoutput"
           & dotnet publish "$projectFilePath" --configuration Release --output "$outputDirectoryPath" --runtime win-x64 --no-self-contained
           if ($LASTEXITCODE -ne 0) { throw "Publishing function failed."}
-
-          $zipFilePath = Join-Path "${{ runner.temp }}" "function.zip"
-          Compress-Archive -Path "$(Join-Path "$outputDirectoryPath" "*")" -DestinationPath "$zipFilePath"
           
-          "ARTIFACT_FILE_PATH=$zipFilePath" >> ${{ github.env }}
+          $compressParameters = @{
+            Path = "$(Join-Path "$outputDirectoryPath" "*")"
+            DestinationPath = "$(Join-Path "${{ runner.temp }}" "function.zip")"
+          }
+          Compress-Archive @compressParameters
+          
+          "ARTIFACT_FILE_PATH=$($compressParameters.DestinationPath)" >> ${{ github.env }}
       - name: Save output
         uses: actions/upload-artifact@v3
         with:
