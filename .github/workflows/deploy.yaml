@@ -86,7 +86,7 @@ jobs:
 
           $projectFilePath = Join-Path "${{ github.workspace }}" "code" "azurefunctions" "azurefunctions.csproj"
           $outputDirectoryPath = Join-Path "${{ runner.temp }}" "functionoutput"
-          & dotnet publish "$projectFilePath" --configuration Release --output "$outputDirectoryPath" --runtime win-x64 --no-self-contained
+          & dotnet publish "$projectFilePath" --configuration Release --output "$outputDirectoryPath" --runtime win-x64 --self-contained
           if ($LASTEXITCODE -ne 0) { throw "Publishing function failed."}
           
           $compressParameters = @{
