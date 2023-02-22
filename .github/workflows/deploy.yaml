@@ -88,7 +88,7 @@ jobs:
           $outputDirectoryPath = Join-Path "${{ runner.temp }}" "functionoutput"
           & dotnet publish "$projectFilePath" --configuration Release --output "$outputDirectoryPath" --runtime win-x64 --self-contained
           if ($LASTEXITCODE -ne 0) { throw "Publishing function failed."}
-          
+          Get-ChildItem "$(Join-Path "$outputDirectoryPath" "*")" -Recurse
           $compressParameters = @{
             Path = "$(Join-Path "$outputDirectoryPath" "*")"
             DestinationPath = "$(Join-Path "${{ runner.temp }}" "function.zip")"
