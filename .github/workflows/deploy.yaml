@@ -145,7 +145,8 @@ jobs:
             $VerbosePreference = "Continue"
             $InformationPreference = "Continue"
 
-            $zipFile = Get-ChildItem -Path "${{ env.ARTIFACT_DOWNLOAD_DIRECTORY }}" -Include "*.zip" | Select-Object -First 1
+            $zipFile = Get-ChildItem -Path "${{ env.ARTIFACT_DOWNLOAD_DIRECTORY }}" | Select-Object -First 1
+            $zipFile
 
             $publishParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
