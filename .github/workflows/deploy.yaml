@@ -2,7 +2,9 @@ name: Deploy to Azure
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
+    branches:
+      - main
 
 env:
   AZURE_FUNCTIONS_ARTIFACT_NAME: azure-functions
