@@ -95,7 +95,7 @@ jobs:
           }
           Compress-Archive @compressParameters
           
-          "ARTIFACT_FILE_PATH=$($compressParameters.DestinationPath)" >> ${{ github.env }}
+          "ARTIFACT_FILE_PATH=$($compressParameters.DestinationPath)" >> "${{ github.env }}"
       - name: Save output
         uses: actions/upload-artifact@v3
         with:
@@ -122,8 +122,8 @@ jobs:
           $VerbosePreference = "Continue"
           $InformationPreference = "Continue"
 
-          $downloadDirectory = Join-Path ${{ runner.temp }} "artifactdownload"
-          echo "ARTIFACT_DOWNLOAD_DIRECTORY=$downloadDirectory" >> ${{ github.env }}
+          $downloadDirectory = Join-Path "${{ runner.temp }}" "artifactdownload"
+          "ARTIFACT_DOWNLOAD_DIRECTORY=$downloadDirectory" >> ${{ github.env }}
       - name: Download output
         uses: actions/download-artifact@v3
         with:
