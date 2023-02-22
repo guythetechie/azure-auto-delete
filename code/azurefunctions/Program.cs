@@ -42,7 +42,8 @@ public static class Program
         services.RemoveLoggingFilter()
                 .AddSingleton(GetTokenCredential)
                 .AddSingleton(GetArmClient)
-                .AddSingleton(ListResourcesByTag);
+                .AddSingleton(ListResourcesByTag)
+                .AddSingleton(DeleteArmResource);
     }
 
     private static IServiceCollection RemoveLoggingFilter(this IServiceCollection services)
