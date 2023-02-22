@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
 
+env:
+  AZURE_FUNCTIONS_ARTIFACT_NAME: azure-functions
+
 jobs:
   deploy_infrastructure:
     name: Deploy Azure infrastructure
@@ -66,8 +69,6 @@ jobs:
   compile:
     name: Compile Azure function
     runs-on: ubuntu-latest
-    outputs:
-      AZURE_FUNCTIONS_CACHE_KEY: ${{ steps.generate_cache_key.outputs.AZURE_FUNCTIONS_CACHE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -75,24 +76,30 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.x
-      - name: Set output directory
-        run: |
-          echo "FUNCTION_OUTPUT_DIRECTORY=${{ runner.temp }}/functionoutput" >> ${{ github.env }}
       - name: Build Azure function
-        run: |
-          set -Eeuo pipefail
-          dotnet publish "${{ github.workspace }}/code/azurefunctions/azurefunctions.csproj" --configuration Release --output "${{ env.FUNCTION_OUTPUT_DIRECTORY }}"
-      - name: Generate cache key
-        id: generate_cache_key
         shell: pwsh
         run: |
-          $key = "azure-functions-output-$(New-Guid)"
-          "AZURE_FUNCTIONS_CACHE_KEY=$key" >> ${{ github.output }}
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $VerbosePreference = "Continue"
+          $InformationPreference = "Continue"
+
+          $projectFilePath = Join-Path "${{ github.workspace }}"" "code" "azurefunctions" "azurefunctions.csproj"
+          $outputDirectoryPath = Join-Path "${{ runner.temp }}" "functionoutput"
+          & dotnet publish "$projectFilePath" --configuration Release --output "$outputDirectoryPath" --runtime win-x64 --no-self-contained
+          if ($LASTEXITCODE -ne 0) { throw "Publishing function failed."}
+
+          $zipFilePath = Join-Path "${{ runner.temp }}" "function.zip"
+          Compress-Archive -Path "$(Join-Path "$outputDirectoryPath" "*")" -DestinationPath "$zipFilePath"
+          
+          "ARTIFACT_FILE_PATH=$zipFilePath" >> ${{ github.env }}
       - name: Save output
-        uses: actions/cache/save@v3
+        uses: actions/upload-artifact@v3
         with:
-          path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
-          key: ${{ steps.generate_cache_key.outputs.AZURE_FUNCTIONS_CACHE_KEY }}
+          name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_FILE_PATH }}
+          if-no-files-found: error
+          retention-days: 1
 
   publish:
     name: Publish Azure function
@@ -100,22 +107,25 @@ jobs:
       - deploy_infrastructure
       - test
       - compile
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
-      packages: read
-      contents: read
     steps:
       - name: Set output directory
+        shell: pwsh
         run: |
-          $outputDirectory = Join-Path ${{ runner.temp }} "functionoutput"
-          echo "FUNCTION_OUTPUT_DIRECTORY=$outputDirectory" >> ${{ github.env }}
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+          $VerbosePreference = "Continue"
+          $InformationPreference = "Continue"
+
+          $downloadDirectory = Join-Path ${{ runner.temp }} "artifactdownload"
+          echo "ARTIFACT_DOWNLOAD_DIRECTORY=$downloadDirectory" >> ${{ github.env }}
       - name: Download output
-        uses: actions/cache/restore@v3
+        uses: actions/download-artifact@v3
         with:
-          path: ${{ env.FUNCTION_OUTPUT_DIRECTORY }}
-          key: "${{ needs.compile.outputs.AZURE_FUNCTIONS_CACHE_KEY }}"
-          fail-on-cache-miss: true
+          name: ${{ env.AZURE_FUNCTIONS_ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_DOWNLOAD_DIRECTORY }}
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -132,17 +142,12 @@ jobs:
             $VerbosePreference = "Continue"
             $InformationPreference = "Continue"
 
-            $zipPath = Join-Path "${{ runner.temp }}" "functionoutput.zip"
-            $compressParameters = @{
-              Path = Join-Path ${{ env.FUNCTION_OUTPUT_DIRECTORY }} "*"
-              DestinationPath = $zipPath
-            }
-            Compress-Archive @compressParameters
+            $zipFile = Get-ChildItem -Path "${{ env.ARTIFACT_DOWNLOAD_DIRECTORY }}" -Include "*.zip" | Select-Object -First 1
 
             $publishParameters = @{
               Name = "${{ needs.deploy_infrastructure.outputs.FUNCTION_APP_NAME }}"
               ResourceGroupName = "${{ needs.deploy_infrastructure.outputs.RESOURCE_GROUP_NAME }}"
-              ArchivePath = $zipPath
+              ArchivePath = "$($zipFile.FullName)"
               Force = true
             }
             Publish-AzWebApp @publishParameters
